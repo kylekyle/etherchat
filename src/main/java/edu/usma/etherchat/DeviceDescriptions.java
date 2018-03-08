@@ -33,7 +33,7 @@ class DeviceDescriptions {
         }
     }
 
-    String getDescription(String id) {
+    String get(String id) {
         return idToDescription.getOrDefault(id, id);
     }
 

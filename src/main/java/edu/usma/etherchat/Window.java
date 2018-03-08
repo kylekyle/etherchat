@@ -8,8 +8,9 @@ import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
+import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -20,36 +21,36 @@ import javax.swing.Timer;
 
 public class Window implements Runnable {
 
-    private final List<String> deviceNames;
-    private final BlockingQueue<Message> messageQueue;
-    private Consumer<String> deviceChangeConsumer;
+    private final List<String> devices;
+    private Consumer deviceConsumer;
+    private Consumer<String> messageConsumer;
+    private Supplier<Map.Entry<String, String>> messageSupplier;
 
-    Window(BlockingQueue<Message> messageQueue) {
-        this.messageQueue = messageQueue;
-        this.deviceNames = new ArrayList();
+    public Window(List<String> devices) {
+        this.devices = devices;
     }
 
-    public static void alert(String message) {
-        JOptionPane.showMessageDialog(null, message);
+    public void onDeviceChange(Consumer<String> consumer) {
+        deviceConsumer = consumer;
     }
 
-    void addDevice(String name) {
-        deviceNames.add(name);
+    public void onMessageSend(Consumer<String> consumer) {
+        messageConsumer = consumer;
     }
 
-    void onDeviceChange(Consumer<String> consumer) {
-        this.deviceChangeConsumer = consumer;
+    public void setMessageSupplier(Supplier<Map.Entry<String, String>> supplier) {
+        messageSupplier = supplier;
     }
 
     @Override
     public void run() {
-        deviceNames.add(0, "Select a network device ...");
-        JComboBox deviceComboBox = new JComboBox(deviceNames.toArray());
+        devices.add(0, "Select a network device ...");
+        JComboBox deviceComboBox = new JComboBox(devices.toArray());
 
         deviceComboBox.addItemListener((e) -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 deviceComboBox.setEnabled(false);
-                deviceChangeConsumer.accept(e.getItem().toString());
+                deviceConsumer.accept(e.getItem().toString());
             }
         });
 
@@ -57,13 +58,12 @@ public class Window implements Runnable {
         messages.setLineWrap(true);
         JScrollPane jp = new JScrollPane(messages);
 
-        // monitor the queue for incoming messages
         new Timer(500, (e) -> {
-            if (!messageQueue.isEmpty()) {
-                try {
-                    messages.append(messageQueue.take().getText());
-                } catch (InterruptedException ignore) {
-                }
+            Map.Entry<String, String> message = messageSupplier.get();
+
+            if (message != null) {
+                messages.append(message.getValue());
+                messages.append(System.getProperty("line.separator"));
             }
         }).start();
 
@@ -105,5 +105,9 @@ public class Window implements Runnable {
         frame.setLocationByPlatform(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
+    }
+
+    public static void alert(String message) {
+        JOptionPane.showMessageDialog(null, message);
     }
 }
