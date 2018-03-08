@@ -1,5 +1,9 @@
 package edu.usma.etherchat;
 
+import com.github.sarxos.winreg.HKey;
+import com.github.sarxos.winreg.RegistryException;
+import com.github.sarxos.winreg.WindowsRegistry;
+import com.sun.jna.Platform;
 import edu.usma.etherchat.MessageReceiver.Message;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -7,7 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -15,29 +20,76 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.Timer;
+import org.pcap4j.core.PcapNativeException;
+import org.pcap4j.core.Pcaps;
 
 public class Window implements Runnable {
 
-    private final List<String> devices;
     private final MessageSender sender;
     private final MessageReceiver receiver;
+    private final DeviceDescriptions deviceDescriptions = new DeviceDescriptions();
 
-    public Window(List<String> devices, MessageSender sender, MessageReceiver receiver) {
-        this.devices = devices;
+    class DeviceDescriptions {
+
+        private final Map<String, String> idToDescription = new HashMap();
+        private final Map<String, String> descriptionToId = new HashMap();
+
+        public DeviceDescriptions() {
+            if (Platform.isWindows()) {
+                WindowsRegistry reg = WindowsRegistry.getInstance();
+                String devices = "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}";
+
+                try {
+                    for (String device : reg.readStringSubKeys(HKey.HKLM, devices)) {
+                        String key = devices + "\\" + device;
+                        String id = reg.readString(HKey.HKLM, key, "NetCfgInstanceId");
+                        String description = reg.readString(HKey.HKLM, key, "DriverDesc");
+                        if (id != null && description != null) {
+                            idToDescription.put("\\Device\\NPF_" + id, description);
+                            descriptionToId.put(description, "\\Device\\NPF_" + id);
+                        }
+                    }
+                } catch (RegistryException ignore) {
+                    System.err.println("Could not find network adapter descriptions in registry");
+                }
+            }
+        }
+
+        String get(String id) {
+            return idToDescription.getOrDefault(id, id);
+        }
+
+        String getId(String description) {
+            return descriptionToId.getOrDefault(description, description);
+        }
+    }
+
+    public Window(MessageSender sender, MessageReceiver receiver) {
         this.sender = sender;
         this.receiver = receiver;
     }
 
     @Override
     public void run() {
-        devices.add(0, "Select a network device ...");
-        JComboBox deviceComboBox = new JComboBox(devices.toArray());
+        JComboBox deviceComboBox = new JComboBox();
+        deviceComboBox.addItem("Select a network device ...");
+
+        try {
+            Pcaps.findAllDevs()
+                    .stream()
+                    .map((device) -> deviceDescriptions.get(device.getName()))
+                    .forEach((description) -> deviceComboBox.addItem(description));
+        } catch (PcapNativeException ex) {
+            alert(ex.getMessage());
+            deviceComboBox.setEnabled(false);
+        }
 
         deviceComboBox.addItemListener((e) -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 deviceComboBox.setEnabled(false);
-                sender.open(e.getItem().toString());
-                receiver.open(e.getItem().toString());
+                String description = e.getItem().toString();
+                sender.open(deviceDescriptions.getId(description));
+                receiver.open(deviceDescriptions.getId(description));
             }
         });
 

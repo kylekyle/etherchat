@@ -1,7 +1,5 @@
 package edu.usma.etherchat;
 
-import java.util.AbstractMap;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.pcap4j.core.BpfProgram;
@@ -17,7 +15,7 @@ public class MessageReceiver implements Runnable {
     private String device;
     private final BlockingQueue<Message> incoming = new LinkedBlockingQueue<>();
 
-    class Message {
+    public class Message {
 
         private final String user;
         private final String text;
@@ -58,14 +56,16 @@ public class MessageReceiver implements Runnable {
                 handle.setFilter("ether proto " + EtherChat.ETHERTYPE.valueAsString(), BpfProgram.BpfCompileMode.OPTIMIZE);
 
                 handle.stream()
-                        .map((packet) -> {
-                            EthernetPacket ether = packet.get(EthernetPacket.class);
-                            String text = new String(ether.getPayload().getRawData());
+                        .map(packet -> (EthernetPacket) packet.get(EthernetPacket.class))
+                        .map(etherchat -> {
+                            String text = new String(etherchat.getPayload().getRawData());
                             return new Message("packet", text);
                         })
-                        .forEach((message) -> incoming.offer(message));
+                        .forEach(message -> incoming.offer(message));
 
             }
+        } catch (NullPointerException ex) {
+            Window.alert("That device is not connected to a network!");
         } catch (PcapNativeException | NotOpenException ex) {
             Window.alert(ex.getMessage());
         }
