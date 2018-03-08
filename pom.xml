@@ -26,7 +26,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>edu.usma.etherchat.Main</mainClass>
+                                    <mainClass>edu.usma.etherchat.EtherChat</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

@@ -9,8 +9,8 @@ import org.pcap4j.packet.namednumber.EtherType;
 
 public class EtherChat {
 
-    public static final int SNAPLEN = 65536; // bytes
-    public static final int READ_TIMEOUT = 10; // ms
+    public static final int SNAPLEN = 65536;
+    public static final int READ_TIMEOUT = 10;
     public static final EtherType ETHERTYPE = new EtherType((short) 0xCAFE, "EtherChat");
 
     public static void main(String[] args) throws InterruptedException {
@@ -24,23 +24,8 @@ public class EtherChat {
 
             MessageSender sender = new MessageSender();
             MessageReceiver receiver = new MessageReceiver();
-
-            Window window = new Window(devices);
-
-            window.onDeviceChange((description) -> {
-                sender.open(deviceDescriptions.getId(description));
-                receiver.open(deviceDescriptions.getId(description));
-            });
-
-            window.onMessageSend((message) -> {
-                sender.send(message);
-            });
-
-            window.setMessageSupplier(() -> {
-                return receiver.getMessage();
-            });
-
-            SwingUtilities.invokeLater(window);
+            
+            SwingUtilities.invokeLater(new Window(devices, sender, receiver));
         } catch (PcapNativeException ex) {
             Window.alert(ex.getMessage());
         }

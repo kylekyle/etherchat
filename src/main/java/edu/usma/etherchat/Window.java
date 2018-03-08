@@ -1,16 +1,13 @@
 package edu.usma.etherchat;
 
+import edu.usma.etherchat.MessageReceiver.Message;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -22,24 +19,13 @@ import javax.swing.Timer;
 public class Window implements Runnable {
 
     private final List<String> devices;
-    private Consumer deviceConsumer;
-    private Consumer<String> messageConsumer;
-    private Supplier<Map.Entry<String, String>> messageSupplier;
+    private final MessageSender sender;
+    private final MessageReceiver receiver;
 
-    public Window(List<String> devices) {
+    public Window(List<String> devices, MessageSender sender, MessageReceiver receiver) {
         this.devices = devices;
-    }
-
-    public void onDeviceChange(Consumer<String> consumer) {
-        deviceConsumer = consumer;
-    }
-
-    public void onMessageSend(Consumer<String> consumer) {
-        messageConsumer = consumer;
-    }
-
-    public void setMessageSupplier(Supplier<Map.Entry<String, String>> supplier) {
-        messageSupplier = supplier;
+        this.sender = sender;
+        this.receiver = receiver;
     }
 
     @Override
@@ -50,7 +36,8 @@ public class Window implements Runnable {
         deviceComboBox.addItemListener((e) -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 deviceComboBox.setEnabled(false);
-                deviceConsumer.accept(e.getItem().toString());
+                sender.open(e.getItem().toString());
+                receiver.open(e.getItem().toString());
             }
         });
 
@@ -59,10 +46,10 @@ public class Window implements Runnable {
         JScrollPane jp = new JScrollPane(messages);
 
         new Timer(500, (e) -> {
-            Map.Entry<String, String> message = messageSupplier.get();
+            Message message = receiver.getMessage();
 
             if (message != null) {
-                messages.append(message.getValue());
+                messages.append(message.getText());
                 messages.append(System.getProperty("line.separator"));
             }
         }).start();
@@ -75,7 +62,7 @@ public class Window implements Runnable {
         input.addFocusListener(new FocusListener() {
             @Override
             public void focusGained(FocusEvent e) {
-                if (input.getBackground() == Color.GRAY) {
+                if (input.getForeground() == Color.GRAY) {
                     input.setText("");
                     input.setForeground(Color.BLACK);
                 }
@@ -91,7 +78,10 @@ public class Window implements Runnable {
         });
 
         input.addActionListener((ActionEvent e) -> {
-            input.setText("");
+            if (!input.getText().isEmpty()) {
+                sender.send(input.getText());
+                input.setText("");
+            }
         });
 
         JFrame frame = new JFrame("EtherChat");
