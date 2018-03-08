@@ -47,5 +47,10 @@
             <artifactId>pcap4j-packetfactory-static</artifactId>
             <version>2.0.0-alpha</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.sarxos</groupId>
+            <artifactId>windows-registry-util</artifactId>
+            <version>0.3</version>
+        </dependency>
     </dependencies>
 </project>
