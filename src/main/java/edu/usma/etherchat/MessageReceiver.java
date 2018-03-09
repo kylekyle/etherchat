@@ -12,7 +12,7 @@ import org.pcap4j.packet.EthernetPacket;
 
 public class MessageReceiver implements Runnable {
 
-    private String device;
+    private PcapNetworkInterface device;
     private final BlockingQueue<Message> incoming = new LinkedBlockingQueue<>();
 
     public class Message {
@@ -34,25 +34,23 @@ public class MessageReceiver implements Runnable {
         }
     }
 
-    void open(String device) {
-        this.device = device;
+    void open(String name) {
+        try {
+            this.device = Pcaps.getDevByName(name);
+        } catch (PcapNativeException ex) {
+            Window.alert(ex.getMessage());
+        }
         new Thread(this).start();
     }
 
     public Message getMessage() {
-        try {
-            return incoming.isEmpty() ? null : incoming.take();
-        } catch (InterruptedException ignore) {
-            return null;
-        }
+        return incoming.poll();
     }
 
     @Override
     public void run() {
         try {
-            PcapNetworkInterface nif = Pcaps.getDevByName(device);
-
-            try (PcapHandle handle = nif.openLive(EtherChat.SNAPLEN, PcapNetworkInterface.PromiscuousMode.PROMISCUOUS, EtherChat.READ_TIMEOUT);) {
+            try (PcapHandle handle = device.openLive(EtherChat.SNAPLEN, PcapNetworkInterface.PromiscuousMode.NONPROMISCUOUS, EtherChat.READ_TIMEOUT);) {
                 handle.setFilter("ether proto " + EtherChat.ETHERTYPE.valueAsString(), BpfProgram.BpfCompileMode.OPTIMIZE);
 
                 handle.stream()
@@ -64,8 +62,6 @@ public class MessageReceiver implements Runnable {
                         .forEach(message -> incoming.offer(message));
 
             }
-        } catch (NullPointerException ex) {
-            Window.alert("That device is not connected to a network!");
         } catch (PcapNativeException | NotOpenException ex) {
             Window.alert(ex.getMessage());
         }

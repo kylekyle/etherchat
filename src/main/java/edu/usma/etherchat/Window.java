@@ -49,8 +49,8 @@ public class Window implements Runnable {
                             descriptionToId.put(description, "\\Device\\NPF_" + id);
                         }
                     }
-                } catch (RegistryException ignore) {
-                    System.err.println("Could not find network adapter descriptions in registry");
+                } catch (RegistryException re) {
+                    System.err.println("Could not find network adapter descriptions in registry: " + re.getMessage());
                 }
             }
         }
