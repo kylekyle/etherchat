@@ -13,13 +13,18 @@ import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 import org.pcap4j.core.PcapNativeException;
 import org.pcap4j.core.Pcaps;
 
@@ -50,7 +55,7 @@ public class Window implements Runnable {
                         }
                     }
                 } catch (RegistryException re) {
-                    System.err.println("Could not find network adapter descriptions in registry: " + re.getMessage());
+                    Logger.getLogger(Window.class.getName()).log(Level.WARNING, re.getMessage());
                 }
             }
         }
@@ -146,6 +151,15 @@ public class Window implements Runnable {
         frame.setSize(1000, 500);
         frame.setLocationByPlatform(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            SwingUtilities.updateComponentTreeUI(frame);
+
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, "Could not load native look and feel", ex);
+        }
+
         frame.setVisible(true);
     }
 
