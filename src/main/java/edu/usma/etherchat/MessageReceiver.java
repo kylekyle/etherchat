@@ -55,9 +55,10 @@ public class MessageReceiver implements Runnable {
 
                 handle.stream()
                         .map(packet -> (EthernetPacket) packet.get(EthernetPacket.class))
-                        .map(etherchat -> {
-                            String text = new String(etherchat.getPayload().getRawData());
-                            return new Message("packet", text);
+                        .map((EthernetPacket ether) -> {
+                            String user = ether.getHeader().getSrcAddr().toString();
+                            String text = new String(ether.getPayload().getRawData());
+                            return new Message(user, text);
                         })
                         .forEach(message -> incoming.offer(message));
 
