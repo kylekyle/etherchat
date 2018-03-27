@@ -2,7 +2,7 @@
 
 ![Etherchat](https://github.com/kylekyle/etherchat/blob/master/etherchat.png "EtherChat")
 
-Etherchat is an ethernet chat client. It doesn't use TCP/IP and only operates on the local broadcast network. It is used to demonstrate networking concepts at West Point and it's terribly useful for anything else. There is not TCP, so you'll find a message doesn't arrive every so often. In fact, it may arrive for one student but not for another. Welcome to layer two :)
+Etherchat is an ethernet chat client. It doesn't use TCP/IP and only operates on the local broadcast network. It is used to demonstrate networking concepts at West Point and it isn't terribly useful for anything else. Since it doesn't use TCP you'll find a message doesn't arrive every so often. In fact, it may arrive for one student but not for another. Welcome to layer two :)
 
 ## Installation
 
