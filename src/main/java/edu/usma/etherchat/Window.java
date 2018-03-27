@@ -8,9 +8,11 @@ import edu.usma.etherchat.MessageReceiver.Message;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +32,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import org.pcap4j.core.PcapNativeException;
+import org.pcap4j.core.PcapNetworkInterface;
 import org.pcap4j.core.Pcaps;
 
 public class Window implements Runnable {
@@ -85,11 +88,12 @@ public class Window implements Runnable {
         }
 
         String get(String id) {
-            return idToDescription.getOrDefault(id, id);
+            return idToDescription.get(id) == null ? id : idToDescription.get(id);
+
         }
 
         String getId(String description) {
-            return descriptionToId.getOrDefault(description, description);
+            return descriptionToId.get(description) == null ? description : descriptionToId.get(description);
         }
     }
 
@@ -102,28 +106,31 @@ public class Window implements Runnable {
     public void run() {
         JTextPane pane = new JTextPane();
         JScrollPane scroll = new JScrollPane(pane);
-        HTMLEditorKit editor = new HTMLEditorKit();
-        HTMLDocument document = new HTMLDocument();
+        final HTMLEditorKit editor = new HTMLEditorKit();
+        final HTMLDocument document = new HTMLDocument();
 
         pane.setEditable(false);
         pane.setEditorKit(editor);
         pane.setDocument(document);
 
-        new Timer(500, (ActionEvent e) -> {
-            Message message = receiver.getMessage();
+        new Timer(500, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                Message message = receiver.getMessage();
 
-            if (message != null) {
-                try {
-                    String color = COLORS[Math.abs(message.getUser().hashCode()) % COLORS.length];
-                    String html = "<font color=" + color + "><b>" + message.getUser() + ":</b></font> " + message.getText();
-                    editor.insertHTML(document, document.getLength(), html, 0, 0, null);
-                } catch (BadLocationException | IOException ex) {
-                    alert(ex.getMessage());
+                if (message != null) {
+                    try {
+                        String color = COLORS[Math.abs(message.getUser().hashCode()) % COLORS.length];
+                        String html = "<font color=" + color + "><b>" + message.getUser() + ":</b></font> " + message.getText();
+                        editor.insertHTML(document, document.getLength(), html, 0, 0, null);
+                    } catch (BadLocationException | IOException ex) {
+                        Window.alert(ex.getMessage());
+                    }
                 }
             }
         }).start();
 
-        JTextField input = new JTextField("Say something!");
+        final JTextField input = new JTextField("Say something!");
         input.setEnabled(false);
 
         // this seems like a lot of work for a placeholder ...
@@ -147,33 +154,38 @@ public class Window implements Runnable {
             }
         });
 
-        input.addActionListener((ActionEvent e) -> {
-            if (!input.getText().isEmpty()) {
-                sender.send(input.getText());
-                input.setText("");
+        input.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                if (!input.getText().isEmpty()) {
+                    sender.send(input.getText());
+                    input.setText("");
+                }
             }
         });
 
-        JComboBox deviceComboBox = new JComboBox();
+        final JComboBox deviceComboBox = new JComboBox();
         deviceComboBox.addItem("Select a network device ...");
 
         try {
-            Pcaps.findAllDevs()
-                    .stream()
-                    .map((device) -> deviceDescriptions.get(device.getName()))
-                    .forEach((description) -> deviceComboBox.addItem(description));
+            for (PcapNetworkInterface device : Pcaps.findAllDevs()) {
+                deviceComboBox.addItem(deviceDescriptions.get(device.getName()));
+            }
         } catch (PcapNativeException ex) {
             alert(ex.getMessage());
             deviceComboBox.setEnabled(false);
         }
 
-        deviceComboBox.addItemListener((e) -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) {
-                input.setEnabled(true);
-                deviceComboBox.setEnabled(false);
-                String description = e.getItem().toString();
-                sender.open(deviceDescriptions.getId(description));
-                receiver.open(deviceDescriptions.getId(description));
+        deviceComboBox.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent ie) {
+                if (ie.getStateChange() == ItemEvent.SELECTED) {
+                    input.setEnabled(true);
+                    deviceComboBox.setEnabled(false);
+                    String description = ie.getItem().toString();
+                    sender.open(deviceDescriptions.getId(description));
+                    receiver.open(deviceDescriptions.getId(description));
+                }
             }
         });
 
