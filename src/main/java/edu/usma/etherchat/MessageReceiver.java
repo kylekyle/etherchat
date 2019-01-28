@@ -30,7 +30,7 @@ public class MessageReceiver implements Runnable {
         }
 
         public String getText() {
-            return text;
+            return text.substring(2);
         }
     }
 
@@ -60,6 +60,7 @@ public class MessageReceiver implements Runnable {
                             String text = new String(ether.getPayload().getRawData());
                             return new Message(user, text);
                         })
+                        .filter(message -> message.text.startsWith("->"))
                         .forEach(message -> incoming.offer(message));
 
             }

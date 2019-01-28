@@ -33,7 +33,7 @@ public class MessageSender implements Runnable {
             try (PcapHandle handle = device.openLive(EtherChat.SNAPLEN, PcapNetworkInterface.PromiscuousMode.NONPROMISCUOUS, EtherChat.READ_TIMEOUT);) {
                 while (true) {
                     try {
-                        String message = outgoing.take();
+                        String message = "->" + outgoing.take();
                         UnknownPacket.Builder payload = new UnknownPacket.Builder();
 
                         EthernetPacket.Builder frame = new EthernetPacket.Builder()
